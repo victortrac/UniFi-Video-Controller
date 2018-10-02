@@ -99,6 +99,26 @@ else
   exit 1
 fi
 
+# Wait for mongodb to come online.
+echo -n "Waiting for mongodb to come online..."
+while ! mongo --quiet localhost:7441 --eval "{ ping: 1}" > /dev/null 2>&1; do
+  sleep 2
+  echo -n "."
+done
+echo " done."
+
+# Update db to 3.4 features
+MONGO_FEATURE_COMPATIBILITY_VERSION=$( mongo --quiet --eval "db.adminCommand( { getParameter: 1, featureCompatibilityVersion: 1 } )" localhost:7441 | jq -r .featureCompatibilityVersion )
+if [[ "${MONGO_FEATURE_COMPATIBILITY_VERSION}" != "3.4" ]]; then
+  echo -n "Found FeatureCompatibilityVersion ${MONGO_FEATURE_COMPATIBILITY_VERSION}, setting to 3.4..."
+  if mongo --quiet --eval 'db.adminCommand( { setFeatureCompatibilityVersion: "3.4" } )' > /dev/null 2>&1; then
+    echo " done."
+  else
+    echo " failed."
+  fi
+fi
+
+# Loop while we wait for shutdown trap
 while true; do
-  sleep 1
+  sleep 2
 done
